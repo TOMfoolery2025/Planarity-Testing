@@ -270,9 +270,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
 
         const conflictNodeIds = new Set();
+        const conflictNodeDegrees = new Map();
+
         conflictEdgesOriginal.forEach(e => {
             conflictNodeIds.add(e.sourceId);
             conflictNodeIds.add(e.targetId);
+
+            conflictNodeDegrees.set(e.sourceId, (conflictNodeDegrees.get(e.sourceId) || 0) + 1);
+            conflictNodeDegrees.set(e.targetId, (conflictNodeDegrees.get(e.targetId) || 0) + 1);
         });
 
         const simulation = d3.forceSimulation(nodes)
@@ -290,7 +295,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .selectAll(".node")
             .data(nodes)
             .join("g")
-            .attr("class", "node");
+            .attr("class", d => {
+                let classes = "node";
+                if (conflictNodeIds.has(d.id)) {
+                    const degree = conflictNodeDegrees.get(d.id);
+                    if (degree > 2) {
+                        classes += " conflict-principal";
+                    } else {
+                        classes += " conflict-subdivision";
+                    }
+                }
+                return classes;
+            });
 
         node.append("circle").attr("r", 6);
         node.append("text").attr("dx", 10).attr("dy", 4).text(d => d.id);

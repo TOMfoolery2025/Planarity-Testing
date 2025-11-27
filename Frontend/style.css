@@ -299,6 +299,23 @@ body {
     opacity: 0.8;
 }
 
+/* Conflict Styles */
+.node.conflict-principal circle {
+    fill: #ef4444;
+    stroke: #fff;
+    stroke-width: 2px;
+    r: 8px;
+    transition: all 0.3s ease;
+}
+
+.node.conflict-subdivision circle {
+    fill: #1e293b;
+    stroke: #ef4444;
+    stroke-width: 2px;
+    r: 5px;
+    transition: all 0.3s ease;
+}
+
 .connector-line {
     stroke: #22d3ee;
     stroke-width: 1px;
