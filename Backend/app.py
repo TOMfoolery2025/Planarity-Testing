@@ -12,63 +12,80 @@ CORS(app)
 # parse graph from txt
 def parse_graph_from_text(content):
     """
-    解析图数据，如果格式严重不符，返回 None
+    Parses graph data. Strictly differentiates between Adjacency Matrix and Edge List.
     """
     try:
         G = nx.Graph()
-        # 去除首尾空白，按行分割
         raw_lines = content.strip().split('\n')
-        # 过滤掉纯空行
+        # Filter out empty lines
         lines = [line.strip() for line in raw_lines if line.strip()]
 
         if not lines:
-            return None  # 文件是空的
+            return None
 
-        # 简单的启发式判断：看第一行
+        # Analyze dimensions
+        num_rows = len(lines)
         first_row_parts = lines[0].split()
         num_cols = len(first_row_parts)
 
-        # === 格式 A: 邻接矩阵 (列数 > 2 且 行数 > 1) ===
-        if num_cols > 2 and len(lines) > 1:
-            print("尝试按邻接矩阵解析...")
-            # 简单的矩阵形状检查：行数是否等于列数？(可选，不做太严也可以)
-            if len(lines) != num_cols:
-                print("警告：矩阵行列数不一致，可能格式有误，但在尝试解析")
+        # Logic: It is a Matrix ONLY if it is a perfect square (Rows == Cols)
+        # AND it has more than 1 column.
+        is_square_matrix = (num_rows == num_cols) and (num_cols > 1)
 
-            for r, line in enumerate(lines):
-                values = line.split()
-                # 如果某一行列数不对，这肯定是个坏文件
-                if len(values) != num_cols:
-                    return None
-                for c, val in enumerate(values):
-                    if val != '0':
-                        G.add_edge(str(r), str(c))
+        # Optional: Check if the content is numeric.
+        # If the first row contains letters (like 'A' 'B'), it's definitely an Edge List.
+        is_numeric = True
+        for x in first_row_parts:
+            if not x.replace('.', '', 1).isdigit():  # Simple check for numbers
+                is_numeric = False
+                break
 
-        # === 格式 B: 边列表 (每行至少 2 个元素) ===
-        else:
-            print("尝试按边列表解析...")
-            for line in lines:
-                parts = line.split()
-                # 关键检查：边列表每一行必须至少有两个点 (u v)
-                if len(parts) < 2:
-                    # 如果遇到像 "Note: xxx" 这种奇怪的行，直接视为格式非法
-                    # 或者你可以选择跳过 (continue)，但既然要是严格检查，就 return None
-                    return None
+        # === Strategy A: Adjacency Matrix ===
+        # Must be square and numeric.
+        if is_square_matrix and is_numeric:
+            print("Detected format: Adjacency Matrix")
+            try:
+                for r, line in enumerate(lines):
+                    values = line.split()
+                    if len(values) != num_cols:
+                        # If a row has inconsistent length, fallback to Edge List
+                        raise ValueError("Row length mismatch")
 
-                u, v = parts[0].strip(), parts[1].strip()
-                G.add_edge(u, v)
+                    for c, val in enumerate(values):
+                        # Assuming non-zero means an edge exists
+                        if val != '0':
+                            G.add_edge(str(r), str(c))
+                return G
+            except ValueError:
+                print("Matrix parsing failed, falling back to Edge List...")
+                G.clear()  # Reset graph to try Strategy B
 
-        # === 最终检查 ===
-        # 如果折腾半天一个点都没读出来，说明这文件是垃圾
+        # === Strategy B: Edge List (Default) ===
+        # Handles "A B", "1 1", "1 2 5" (ignores weight 5)
+        print("Detected format: Edge List")
+        for line in lines:
+            parts = line.split()
+
+            # Need at least 'u v' (2 parts)
+            if len(parts) < 2:
+                continue
+
+            # We only care about the first two elements: Source and Target.
+            # This fixes issues where weights or extra data confused the parser.
+            u, v = parts[0].strip(), parts[1].strip()
+
+            # Add edge. NetworkX handles mixed types (int/str) by treating them as hashables.
+            # We cast to string to ensure consistency.
+            G.add_edge(str(u), str(v))
+
         if G.number_of_nodes() == 0:
             return None
 
         return G
 
     except Exception as e:
-        print(f"解析过程发生严重错误: {e}")
+        print(f"Critical parsing error: {e}")
         return None
-
 
 # --- 2. 定义接口：上传文件的入口 ---
 @app.route('/check-planarity', methods=['POST'])
