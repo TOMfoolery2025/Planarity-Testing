@@ -88,6 +88,10 @@
                         <button class="btn-icon reset-view" title="Reset View">⟲</button>
                     </div>
                 </div>
+
+                <!-- Draggable Divider -->
+                <div class="panel-divider" id="panel-divider"></div>
+
                 <div class="view-panel" id="result-panel">
                     <h3 id="result-header">Analysis Result</h3>
                     <div id="result-graph" class="graph-container">
@@ -99,6 +103,34 @@
                         <button class="btn-icon zoom-in" title="Zoom In">+</button>
                         <button class="btn-icon zoom-out" title="Zoom Out">-</button>
                         <button class="btn-icon reset-view" title="Reset View">⟲</button>
+                    </div>
+
+                    <!-- Play Animation Button (shown for non-planar graphs) -->
+                    <button class="btn-play-animation hidden" id="play-animation">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Play Animation
+                    </button>
+
+                    <!-- Animation Controls (shown only during animation) -->
+                    <div class="animation-controls hidden" id="animation-controls">
+                        <button class="btn-icon" id="anim-prev" title="Previous Step">←</button>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <span class="step-counter" id="step-counter">Step 0 / 0</span>
+                        </div>
+                        <button class="btn-icon" id="anim-next" title="Next Step">→</button>
+                        <button class="btn-cancel-animation" id="cancel-animation" title="Cancel Animation">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>

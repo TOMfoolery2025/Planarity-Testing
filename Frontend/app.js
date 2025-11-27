@@ -13,6 +13,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorMessage = document.getElementById("error-message");
     const closeModalBtn = document.getElementById("close-modal");
 
+    // Draggable divider
+    const divider = document.getElementById("panel-divider");
+    const leftPanel = document.querySelector(".view-panel:first-child");
+    const rightPanel = document.getElementById("result-panel");
+
+    let isDragging = false;
+
+    divider.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        document.body.style.cursor = "col-resize";
+        e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+
+        const container = document.querySelector(".split-view");
+        const containerRect = container.getBoundingClientRect();
+        const offsetX = e.clientX - containerRect.left;
+        const percentage = (offsetX / containerRect.width) * 100;
+
+        // Limit between 20% and 80%
+        if (percentage > 20 && percentage < 80) {
+            leftPanel.style.flex = `${percentage} 1 0%`;
+            rightPanel.style.flex = `${100 - percentage} 1 0%`;
+        }
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+        document.body.style.cursor = "";
+    });
+
     // Close Modal Event
     closeModalBtn.addEventListener("click", () => {
         errorModal.classList.remove("show");
@@ -133,6 +166,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.getElementById("conflict-stat").style.display = "flex";
                     document.getElementById("conflict-type").textContent = data.type;
                 }
+                // Show Play Animation button
+                document.getElementById("play-animation").classList.remove("hidden");
             }, 500);
         }
     }
@@ -141,6 +176,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Clear previous graphs
         document.getElementById("original-graph").innerHTML = "";
         document.getElementById("result-graph").innerHTML = "";
+
+        // Reset animation UI
+        document.getElementById("play-animation").classList.add("hidden");
+        document.getElementById("animation-controls").classList.add("hidden");
+
+        // Reset panel expansion (will re-trigger if non-planar)
+        document.getElementById("result-panel").classList.remove("expanded");
 
         // 1. Render Original Input
         renderSingleGraph("#original-graph", data, {
@@ -157,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 staticCoords: true
             });
         } else {
-            // Non-Planar: Render with Canonical Subgraph
+            // Non-Planar: Render with Canonical Subgraph (static mode initially)
             renderCanonicalGraph("#result-graph", data);
         }
     }
@@ -187,17 +229,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const nodes = data.nodes.map(d => ({ ...d }));
         const edges = data.edges.map(d => ({ ...d }));
 
-        // Filter conflict nodes for connecting lines later
+        // Store conflict edges with original string IDs for animation
+        const conflictEdgesOriginal = edges.filter(e => e.is_conflict).map(e => ({
+            source: e.source,
+            target: e.target,
+            sourceId: String(e.source),
+            targetId: String(e.target)
+        }));
+
         const conflictNodeIds = new Set();
-        edges.filter(e => e.is_conflict).forEach(e => {
-            conflictNodeIds.add(e.source);
-            conflictNodeIds.add(e.target);
+        conflictEdgesOriginal.forEach(e => {
+            conflictNodeIds.add(e.sourceId);
+            conflictNodeIds.add(e.targetId);
         });
 
         const simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(edges).id(d => d.id).distance(100))
             .force("charge", d3.forceManyBody().strength(-300))
-            .force("center", d3.forceCenter(width / 3, height / 2)); // Shift to left
+            .force("center", d3.forceCenter(width / 3, height / 2));
 
         const link = mainGroup.append("g")
             .selectAll("line")
@@ -214,15 +263,31 @@ document.addEventListener("DOMContentLoaded", () => {
         node.append("circle").attr("r", 6);
         node.append("text").attr("dx", 10).attr("dy", 4).text(d => d.id);
 
-        // --- 2. Draw Canonical Graph (K5 or K3,3) ---
+        // Make nodes draggable
+        node.call(d3.drag()
+            .on("start", function (event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            })
+            .on("drag", function (event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on("end", function (event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            })
+        );
+
+        // --- 2. Canonical Graph (initially visible) ---
+        const type = data.type || "K5";
+        const canonicalData = generateCanonicalData(type, width * 0.8, height * 0.7); // Bottom-right
+
         const canonicalGroup = mainGroup.append("g").attr("class", "canonical-group");
-        const connectorGroup = mainGroup.append("g").attr("class", "connector-group"); // For connecting lines
+        const connectorGroup = mainGroup.append("g").attr("class", "connector-group");
 
-        // Generate Canonical Data
-        const type = data.type || "K5"; // Default to K5 if unknown
-        const canonicalData = generateCanonicalData(type, width * 0.75, height / 2); // Shift to right
-
-        // Draw Canonical Edges
         canonicalGroup.selectAll(".edge.canonical")
             .data(canonicalData.edges)
             .join("line")
@@ -232,7 +297,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .attr("x2", d => d.target.x)
             .attr("y2", d => d.target.y);
 
-        // Draw Canonical Nodes
         const canonicalNodes = canonicalGroup.selectAll(".node.canonical")
             .data(canonicalData.nodes)
             .join("g")
@@ -242,9 +306,168 @@ document.addEventListener("DOMContentLoaded", () => {
         canonicalNodes.append("circle").attr("r", 8);
         canonicalNodes.append("text").attr("dx", 10).attr("dy", 4).text(d => d.id);
 
-        // --- 3. Update Simulation ---
+        // --- 3. Animation State ---
+        let animationMode = false;
+        let currentStep = 0;
+        const totalSteps = conflictEdgesOriginal.length;
+
+        // Animation edges group (initially empty)
+        const animEdgesGroup = mainGroup.append("g").attr("class", "anim-edges");
+
+        // Animation nodes group (copy of canonical nodes, shown during animation)
+        const animNodesGroup = mainGroup.append("g").attr("class", "anim-nodes");
+
+        function updateAnimationStep(step) {
+            currentStep = Math.max(0, Math.min(step, totalSteps));
+
+            // Update progress UI
+            const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
+            d3.select("#progress-fill").style("width", progress + "%");
+            d3.select("#step-counter").text(`Step ${currentStep} / ${totalSteps}`);
+
+            // Show canonical nodes during animation (using normal node style)
+            // Map node IDs to conflict node IDs from the original graph
+            const conflictNodeIdsArray = Array.from(conflictNodeIds);
+            const mappedCanonicalNodes = canonicalData.nodes.map((n, i) => ({
+                ...n,
+                id: conflictNodeIdsArray[i % conflictNodeIdsArray.length] || n.id
+            }));
+
+            animNodesGroup.selectAll(".node")
+                .data(mappedCanonicalNodes)
+                .join(
+                    enter => {
+                        const g = enter.append("g").attr("class", "node");
+                        g.append("circle").attr("r", 6);
+                        g.append("text").attr("dx", 10).attr("dy", 4).text(d => d.id);
+                        return g;
+                    }
+                )
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            // Redraw animation edges (fly from original to canonical position)
+            const edgesToShow = conflictEdgesOriginal.slice(0, currentStep);
+            const edgesToRemove = conflictEdgesOriginal.slice(currentStep);
+
+            // Handle entering edges (fly in)
+            animEdgesGroup.selectAll(".edge.canonical")
+                .data(edgesToShow, (d, i) => i)
+                .join(
+                    enter => {
+                        const line = enter.append("line")
+                            .attr("class", "edge canonical");
+
+                        // Set initial position from graph nodes
+                        line.attr("x1", d => {
+                            const sourceNode = nodes.find(n => n.id === d.sourceId);
+                            return sourceNode ? sourceNode.x : 0;
+                        })
+                            .attr("y1", d => {
+                                const sourceNode = nodes.find(n => n.id === d.sourceId);
+                                return sourceNode ? sourceNode.y : 0;
+                            })
+                            .attr("x2", d => {
+                                const targetNode = nodes.find(n => n.id === d.targetId);
+                                return targetNode ? targetNode.x : 0;
+                            })
+                            .attr("y2", d => {
+                                const targetNode = nodes.find(n => n.id === d.targetId);
+                                return targetNode ? targetNode.y : 0;
+                            });
+
+                        // Animate to canonical position
+                        line.transition()
+                            .duration(500)
+                            .attr("x1", (d, i) => canonicalData.edges[i].source.x)
+                            .attr("y1", (d, i) => canonicalData.edges[i].source.y)
+                            .attr("x2", (d, i) => canonicalData.edges[i].target.x)
+                            .attr("y2", (d, i) => canonicalData.edges[i].target.y);
+
+                        return line;
+                    },
+                    update => {
+                        // For existing edges, just keep them at canonical position
+                        return update
+                            .attr("x1", (d, i) => canonicalData.edges[i].source.x)
+                            .attr("y1", (d, i) => canonicalData.edges[i].source.y)
+                            .attr("x2", (d, i) => canonicalData.edges[i].target.x)
+                            .attr("y2", (d, i) => canonicalData.edges[i].target.y);
+                    },
+                    exit => {
+                        // Fly back to original position before removing
+                        exit.transition()
+                            .duration(500)
+                            .attr("x1", d => {
+                                const sourceNode = nodes.find(n => n.id === d.sourceId);
+                                return sourceNode ? sourceNode.x : 0;
+                            })
+                            .attr("y1", d => {
+                                const sourceNode = nodes.find(n => n.id === d.sourceId);
+                                return sourceNode ? sourceNode.y : 0;
+                            })
+                            .attr("x2", d => {
+                                const targetNode = nodes.find(n => n.id === d.targetId);
+                                return targetNode ? targetNode.x : 0;
+                            })
+                            .attr("y2", d => {
+                                const targetNode = nodes.find(n => n.id === d.targetId);
+                                return targetNode ? targetNode.y : 0;
+                            })
+                            .remove();
+                    }
+                );
+        }
+
+        // Play Animation Button
+        d3.select("#play-animation").on("click", () => {
+            animationMode = true;
+            currentStep = 0;
+
+            // Hide static canonical edges and nodes
+            canonicalGroup.selectAll(".edge.canonical").style("display", "none");
+            canonicalGroup.selectAll(".node.canonical").style("display", "none");
+
+            // Hide Play button, show animation controls
+            d3.select("#play-animation").classed("hidden", true);
+            d3.select("#animation-controls").classed("hidden", false);
+
+            // Start animation
+            updateAnimationStep(0);
+        });
+
+        // Cancel Animation Button
+        d3.select("#cancel-animation").on("click", () => {
+            animationMode = false;
+            currentStep = 0;
+
+            // Clear animation edges and nodes
+            animEdgesGroup.selectAll("*").remove();
+            animNodesGroup.selectAll("*").remove();
+
+            // Restore static canonical
+            canonicalGroup.selectAll(".edge.canonical").style("display", null);
+            canonicalGroup.selectAll(".node.canonical").style("display", null);
+
+            // Hide animation controls, show Play button
+            d3.select("#animation-controls").classed("hidden", true);
+            d3.select("#play-animation").classed("hidden", false);
+
+            // Reset progress
+            d3.select("#progress-fill").style("width", "0%");
+            d3.select("#step-counter").text("Step 0 / 0");
+        });
+
+        // Prev/Next Buttons
+        d3.select("#anim-prev").on("click", () => {
+            if (animationMode) updateAnimationStep(currentStep - 1);
+        });
+
+        d3.select("#anim-next").on("click", () => {
+            if (animationMode) updateAnimationStep(currentStep + 1);
+        });
+
+        // --- 4. Update Simulation ---
         simulation.on("tick", () => {
-            // Update Main Graph
             link
                 .attr("x1", d => d.source.x)
                 .attr("y1", d => d.source.y)
@@ -253,16 +476,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             node.attr("transform", d => `translate(${d.x},${d.y})`);
 
-            // Update Connector Lines (Dynamic)
-            // We draw lines from main graph conflict nodes to *any* canonical node 
-            // just to visually link them. A real mapping is hard, so we map by index or random for visual effect.
-            // Better approach: If we knew the mapping, we'd use it. 
-            // For MVP: Map the first N conflict nodes to the N canonical nodes.
-
+            // Connector lines (always the same, regardless of animation state)
             const connectors = [];
             const conflictNodesArr = nodes.filter(n => conflictNodeIds.has(n.id));
-
-            // Simple mapping strategy: Map conflict node i to canonical node i % canonical_size
             conflictNodesArr.forEach((n, i) => {
                 const target = canonicalData.nodes[i % canonicalData.nodes.length];
                 connectors.push({ source: n, target: target });
