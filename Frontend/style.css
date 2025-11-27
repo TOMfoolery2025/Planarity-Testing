@@ -124,6 +124,7 @@ body {
     font-weight: 700;
     background: linear-gradient(to right, #fff, #ccc);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -208,7 +209,7 @@ body {
 
 .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
 }
 
@@ -248,10 +249,40 @@ body {
     flex-direction: column;
     border-right: 1px solid var(--glass-border);
     position: relative;
+    transition: flex 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smooth expansion */
+}
+
+.view-panel.expanded {
+    flex: 2.5;
+    /* Expand to take more space */
 }
 
 .view-panel:last-child {
     border-right: none;
+}
+
+/* ... existing h3 styles ... */
+
+/* Canonical Graph Styles */
+.node.canonical circle {
+    fill: #ff4757;
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+.edge.canonical {
+    stroke: #ff4757;
+    stroke-width: 2px;
+    opacity: 0.8;
+}
+
+.connector-line {
+    stroke: #ff4757;
+    stroke-width: 1px;
+    stroke-dasharray: 4, 4;
+    opacity: 0.4;
+    pointer-events: none;
 }
 
 .view-panel h3 {
@@ -283,9 +314,12 @@ body {
 
 .viz-controls {
     position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 1rem;
+    right: 1rem;
+    left: auto;
+    /* Reset previous centering */
+    transform: none;
+    /* Reset previous centering */
     display: flex;
     gap: 0.5rem;
     background: var(--glass-bg);

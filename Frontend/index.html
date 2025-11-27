@@ -65,6 +65,10 @@
                         <span class="stat-label">Edges</span>
                         <span class="stat-value" id="edge-count">-</span>
                     </div>
+                    <div class="stat-item" id="conflict-stat" style="display: none;">
+                        <span class="stat-label">Conflict</span>
+                        <span class="stat-value" id="conflict-type">-</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -78,21 +82,25 @@
                             <p>Upload a file to start</p>
                         </div>
                     </div>
+                    <div class="viz-controls" id="controls-original">
+                        <button class="btn-icon zoom-in" title="Zoom In">+</button>
+                        <button class="btn-icon zoom-out" title="Zoom Out">-</button>
+                        <button class="btn-icon reset-view" title="Reset View">⟲</button>
+                    </div>
                 </div>
-                <div class="view-panel">
-                    <h3>Analysis Result</h3>
+                <div class="view-panel" id="result-panel">
+                    <h3 id="result-header">Analysis Result</h3>
                     <div id="result-graph" class="graph-container">
                         <div class="empty-state">
                             <p>Result will appear here</p>
                         </div>
                     </div>
+                    <div class="viz-controls" id="controls-result">
+                        <button class="btn-icon zoom-in" title="Zoom In">+</button>
+                        <button class="btn-icon zoom-out" title="Zoom Out">-</button>
+                        <button class="btn-icon reset-view" title="Reset View">⟲</button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="viz-controls">
-                <button class="btn-icon" id="zoom-in" title="Zoom In">+</button>
-                <button class="btn-icon" id="zoom-out" title="Zoom Out">-</button>
-                <button class="btn-icon" id="reset-view" title="Reset View">⟲</button>
             </div>
         </section>
     </main>
