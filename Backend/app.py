@@ -205,8 +205,10 @@ def check_planarity():
         # Check Planarity
 
             start_time = time.perf_counter()
-            is_planar, certificate = nx.check_planarity(G, counterexample=True)
+            is_planar, certificate = nx.check_planarity(G, counterexample=False)
             end_time = time.perf_counter()
+
+            is_planar, certificate = nx.check_planarity(G, counterexample=True)
 
             scale = 500
 
