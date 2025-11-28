@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // We don't need to show loading state on main UI, maybe just a cursor wait?
             document.body.style.cursor = 'wait';
 
-            const result = await checkPlanarity(file);
+            const result = await checkPlanarity(file, document.getElementById('algorithm-select').value);
             document.body.style.cursor = 'default';
 
             if (result.success) {
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setLoadingState();
         resetGraphUI(); // Clear previous graph and reset UI
 
-        const result = await checkPlanarity(file);
+        const result = await checkPlanarity(file, document.getElementById('algorithm-select').value);
 
         if (result.success) {
             setServerStatus(result.serverConnected);

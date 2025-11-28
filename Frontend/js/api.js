@@ -11,9 +11,10 @@ export async function pingServer() {
     }
 }
 
-export async function checkPlanarity(file) {
+export async function checkPlanarity(file, algorithm = 'Left-Right') {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("algorithm", algorithm);
 
     try {
         let data;

@@ -139,7 +139,11 @@ body {
     border-right: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+    max-height: 100%;
+    /* Ensure it respects container height */
 }
 
 .upload-box {

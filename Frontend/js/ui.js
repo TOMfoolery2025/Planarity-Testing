@@ -6,6 +6,7 @@ export const UI = {
     statusDot: document.querySelector("#status-panel .status-dot"),
     nodeCountEl: document.getElementById("node-count"),
     edgeCountEl: document.getElementById("edge-count"),
+    execTimeEl: document.getElementById("exec-time"),
     serverStatusDot: document.getElementById("server-status-dot"),
     errorModal: document.getElementById("error-modal"),
     errorMessage: document.getElementById("error-message"),
@@ -70,6 +71,11 @@ export function setLoadingState() {
 export function updateStats(data) {
     UI.nodeCountEl.textContent = data.nodes.length;
     UI.edgeCountEl.textContent = data.edges.length;
+    if (data.execution_time_ms !== undefined) {
+        UI.execTimeEl.textContent = data.execution_time_ms + "ms";
+    } else {
+        UI.execTimeEl.textContent = "-";
+    }
 
     if (data.status === "planar") {
         UI.statusText.textContent = "Planar Graph";
