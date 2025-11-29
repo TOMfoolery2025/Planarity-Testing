@@ -1,6 +1,8 @@
 # 🌐 Planarity Inspector
 > **Hackathon 2025 Project** - *Visualizing Graph Theory Algorithms with Modern Web Tech*
 
+Members: Jiuyue Jiang, Jason Zhong, Weitong Sun
+
 Original Project: [https://github.com/MamboJiang/Planarity-Testing](https://github.com/mambojiang/Planarity-Testing).
 
 Test Here: [https://planar.mambojiang.site/](https://planar.mambojiang.site/) , The testcases are in the `test_files` folder.
