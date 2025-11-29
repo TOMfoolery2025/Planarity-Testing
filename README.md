@@ -1,9 +1,17 @@
 # 🌐 Planarity Inspector
 > **Hackathon 2025 Project** - *Visualizing Graph Theory Algorithms with Modern Web Tech*
 
+Original Project: [https://github.com/MamboJiang/Planarity-Testing](https://github.com/mambojiang/Planarity-Testing).
+
 Test Here: [https://planar.mambojiang.site/](https://planar.mambojiang.site/) , The testcases are in the `test_files` folder.
 
 A powerful, interactive web application for testing graph planarity. Unlike standard tools that just say "Yes" or "No", Planarity Inspector **visualizes the proof**: it either constructs a planar embedding or extracts and animates the specific non-planar conflict (Kuratowski subgraph).
+
+## Demo video
+
+[https://imghost.mambojiang.site/hackathon/demo01.mp4](https://imghost.mambojiang.site/hackathon/demo01.mp4)
+
+------
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
